@@ -1,0 +1,387 @@
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- ลบ UI เก่าถ้ามี
+local oldUI = playerGui:FindFirstChild("DraggableToggleUI")
+if oldUI then
+	oldUI:Destroy()
+end
+
+-- สร้าง ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DraggableToggleUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-- UI หลัก
+local bg = Instance.new("Frame")
+bg.Size = UDim2.new(0, 600, 0, 250)
+bg.Position = UDim2.new(0.5, -300, 0.5, -125)
+bg.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+bg.BorderSizePixel = 0
+bg.Visible = true
+bg.Parent = screenGui
+
+local stroke = Instance.new("UIStroke")
+stroke.Thickness = 2
+stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+stroke.Parent = bg
+
+-- ปุ่มเปิด/ปิด UI
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 60, 0, 40)
+toggleBtn.Position = UDim2.new(0, 20, 0, 20)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+toggleBtn.BorderColor3 = Color3.new(1, 1, 1)
+toggleBtn.BorderSizePixel = 1
+toggleBtn.Text = "GxH"
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Font = Enum.Font.SourceSansBold
+toggleBtn.TextSize = 28
+toggleBtn.Parent = screenGui
+
+-- ทำให้ปุ่มสามารถลากเลื่อนได้
+local dragging = false
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
+
+local function update(input)
+	local delta = input.Position - dragStart
+	toggleBtn.Position = UDim2.new(
+		startPos.X.Scale,
+		startPos.X.Offset + delta.X,
+		startPos.Y.Scale,
+		startPos.Y.Offset + delta.Y
+	)
+end
+
+toggleBtn.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = toggleBtn.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+toggleBtn.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and input == dragInput then
+		update(input)
+	end
+end)
+
+toggleBtn.MouseButton1Click:Connect(function()
+	bg.Visible = not bg.Visible
+end)
+
+-- ฟังก์ชันสถานะ
+local function getPlayerStatus(playerName)
+	if playerName == "Myloveyoou5" or playerName == "mm55061" then
+		return "Creator"
+	else
+		return "Guest"
+	end
+end
+
+-- ตัวแปร fpsLabel, frames, lastTime
+local fpsLabel = nil
+local frames = 0
+local lastTime = tick()
+
+-- สร้าง FPS Label
+local function createFPSLabel(parent)
+	if fpsLabel then
+		fpsLabel.Parent = nil
+	end
+	fpsLabel = Instance.new("TextLabel")
+	fpsLabel.Size = UDim2.new(0, 200, 0, 25)
+	fpsLabel.Position = UDim2.new(0, 100, 0, 80)
+	fpsLabel.BackgroundTransparency = 1
+	fpsLabel.TextColor3 = Color3.new(1,1,1)
+	fpsLabel.Font = Enum.Font.SourceSans
+	fpsLabel.TextSize = 18
+	fpsLabel.Text = "FPS: Calculating..."
+	fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+	fpsLabel.Parent = parent
+end
+
+-- ฟังก์ชันสร้างเนื้อหา Main Tab
+local function createMainTabContent(parent, player)
+	parent:ClearAllChildren()
+
+	local avatar = Instance.new("ImageLabel")
+	avatar.Size = UDim2.new(0, 80, 0, 80)
+	avatar.Position = UDim2.new(0, 10, 0, 10)
+	avatar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	avatar.BorderSizePixel = 1
+	avatar.BorderColor3 = Color3.new(1,1,1)
+	avatar.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. player.UserId .. "&width=420&height=420&format=png"
+	avatar.Parent = parent
+
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Size = UDim2.new(0, 400, 0, 30)
+	nameLabel.Position = UDim2.new(0, 100, 0, 20)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.TextColor3 = Color3.new(1,1,1)
+	nameLabel.Font = Enum.Font.SourceSansBold
+	nameLabel.TextSize = 20
+	nameLabel.Text = player.Name .. " | GxH Hub | Survival in area 51"
+	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+	nameLabel.Parent = parent
+
+	local statusLabel = Instance.new("TextLabel")
+	statusLabel.Size = UDim2.new(0, 200, 0, 25)
+	statusLabel.Position = UDim2.new(0, 100, 0, 50)
+	statusLabel.BackgroundTransparency = 1
+	statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+	statusLabel.Font = Enum.Font.SourceSansBold
+	statusLabel.TextSize = 18
+	statusLabel.Text = "Status: " .. getPlayerStatus(player.Name)
+	statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+	statusLabel.Parent = parent
+
+	createFPSLabel(parent)
+end
+
+-- สมมติตำแหน่งปืน (Vector3) กับชื่อปืนในแท็บ Gun
+local gunPositions = {
+	{ Name = "LXW", Position = Vector3.new(-15, 860.201111, -43.5, 1, 0, 0, 0, 1, 0, 0, 0, 1) },
+	{ Name = "Ice Crossbow", Position = Vector3.new(243.564819, 688.290649, 943.856079, 1, 0, 0, 0, 1, 0, 0, 0, 1) },
+	{ Name = "HEX Spitter", Position = Vector3.new(-583.435181, 1080.29065, 1087.85608, 1, 0, 0, 0, 1, 0, 0, 0, 1) },
+	{ Name = "Vulcan", Position = Vector3.new(-600.84668, 950.275146, 154.955566, 0.458114207, -0, -0.888893366, 0, 1, -0, 0.888893366, 0, 0.458114207) },
+	{ Name = "Red Missile Launcher", Position = Vector3.new(-353.435181, 1070.29065, 409.856079, 1, 0, 0, 0, 1, 0, 0, 0, 1) },
+}
+
+-- ฟังก์ชันวาร์ปผู้เล่นไปตำแหน่ง
+local function teleportToPosition(pos)
+	local char = player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		char.HumanoidRootPart.CFrame = CFrame.new(pos + Vector3.new(0,3,0)) -- ยกสูงขึ้นเล็กน้อย
+	end
+end
+
+-- ฟังก์ชันสร้างแท็บ Gun พร้อมปุ่มสวย ๆ ไม่ล้นกรอบ
+local function createGunTabContent(parent)
+	parent:ClearAllChildren()
+
+	local infoLabel = Instance.new("TextLabel")
+	infoLabel.Size = UDim2.new(1, -20, 0, 30)
+	infoLabel.Position = UDim2.new(0, 10, 0, 10)
+	infoLabel.BackgroundTransparency = 1
+	infoLabel.TextColor3 = Color3.new(1,1,1)
+	infoLabel.Font = Enum.Font.SourceSansBold
+	infoLabel.TextSize = 20
+	infoLabel.Text = "Click button to teleport and collect the gun:"
+	infoLabel.TextXAlignment = Enum.TextXAlignment.Left
+	infoLabel.Parent = parent
+
+	local buttonFrame = Instance.new("ScrollingFrame")
+	buttonFrame.Size = UDim2.new(1, -20, 1, -50)
+	buttonFrame.Position = UDim2.new(0, 10, 0, 50)
+	buttonFrame.BackgroundTransparency = 0.7
+	buttonFrame.BackgroundColor3 = Color3.fromRGB(40,40,40)
+	buttonFrame.BorderColor3 = Color3.new(1,1,1)
+	buttonFrame.BorderSizePixel = 1
+	buttonFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+	buttonFrame.ScrollBarThickness = 8
+	buttonFrame.Parent = parent
+
+	local layout = Instance.new("UIListLayout")
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, 8)
+	layout.Parent = buttonFrame
+
+	for i, gun in ipairs(gunPositions) do
+		local btn = Instance.new("TextButton")
+		btn.Size = UDim2.new(1, -20, 0, 40)
+		btn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+		btn.BorderSizePixel = 0
+		btn.Text = gun.Name
+		btn.Font = Enum.Font.SourceSansBold
+		btn.TextSize = 18
+		btn.TextColor3 = Color3.new(1,1,1)
+		btn.Parent = buttonFrame
+
+		btn.MouseButton1Click:Connect(function()
+			teleportToPosition(gun.Position)
+		end)
+	end
+
+	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		buttonFrame.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+	end)
+end
+
+-- โครงเมนูแท็บ
+local menuFrame = Instance.new("Frame")
+menuFrame.Size = UDim2.new(1, 0, 0, 50)
+menuFrame.Position = UDim2.new(0, 0, 0, 0)
+menuFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+menuFrame.BorderColor3 = Color3.new(1,1,1)
+menuFrame.BorderSizePixel = 1
+menuFrame.Parent = bg
+
+local menuScroll = Instance.new("ScrollingFrame")
+menuScroll.Size = UDim2.new(1, 0, 1, 0)
+menuScroll.BackgroundTransparency = 1
+menuScroll.ScrollBarThickness = 6
+menuScroll.HorizontalScrollBarInset = Enum.ScrollBarInset.Always
+menuScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+menuScroll.ScrollBarImageColor3 = Color3.fromRGB(255,80,80)
+menuScroll.Parent = menuFrame
+
+local layout = Instance.new("UIListLayout")
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.FillDirection = Enum.FillDirection.Horizontal
+layout.Parent = menuScroll
+
+local contentFrame = Instance.new("Frame")
+contentFrame.Size = UDim2.new(1, 0, 1, -50)
+contentFrame.Position = UDim2.new(0, 0, 0, 50)
+contentFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+contentFrame.BorderColor3 = Color3.new(1,1,1)
+contentFrame.BorderSizePixel = 1
+contentFrame.Parent = bg
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 30)
+titleLabel.Position = UDim2.new(0, 0, 0, 5)
+titleLabel.BackgroundTransparency = 1
+titleLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.TextSize = 20
+titleLabel.Text = "Main"
+titleLabel.Parent = contentFrame
+
+local tabs = {
+	{Name = "Main"},
+	{Name = "Location"},
+	{Name = "Gun"},
+	{Name = "Additional"},
+	{Name = "Credits"},
+}
+
+local buttons = {}
+local function clearButtonHighlights()
+	for _, btn in pairs(buttons) do
+		btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+		btn.TextColor3 = Color3.new(1,1,1)
+	end
+end
+
+local function onTabClicked(index)
+	local tab = tabs[index]
+	titleLabel.Text = tab.Name
+	clearButtonHighlights()
+	buttons[index].BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+	buttons[index].TextColor3 = Color3.new(1,1,1)
+
+	contentFrame:ClearAllChildren()
+	contentFrame.Size = UDim2.new(1, 0, 1, -50)
+	contentFrame.Position = UDim2.new(0, 0, 0, 50)
+	contentFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+	contentFrame.BorderColor3 = Color3.new(1,1,1)
+	contentFrame.BorderSizePixel = 1
+	contentFrame.Parent = bg
+
+	if tab.Name == "Main" then
+		createMainTabContent(contentFrame, player)
+	elseif tab.Name == "Gun" then
+		createGunTabContent(contentFrame)
+	elseif tab.Name == "Credits" then
+		local creditLabel = Instance.new("TextLabel")
+		creditLabel.Size = UDim2.new(1, -20, 1, -40)
+		creditLabel.Position = UDim2.new(0, 10, 0, 40)
+		creditLabel.BackgroundTransparency = 1
+		creditLabel.TextColor3 = Color3.new(1,1,1)
+		creditLabel.Font = Enum.Font.SourceSans
+		creditLabel.TextSize = 16
+		creditLabel.TextWrapped = true
+		creditLabel.Text = "By GxH Hub YT https://youtube.com/@gxh-gulhub?si=0OKypQsLRTydRO2y"
+		creditLabel.Parent = contentFrame
+	else
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(1, -20, 1, -40)
+		label.Position = UDim2.new(0, 10, 0, 40)
+		label.BackgroundTransparency = 1
+		label.TextColor3 = Color3.new(1,1,1)
+		label.Font = Enum.Font.SourceSans
+		label.TextSize = 16
+		label.TextWrapped = true
+		label.Text = "Content for " .. tab.Name .. " tab"
+		label.Parent = contentFrame
+	end
+end
+
+for i, tab in ipairs(tabs) do
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0, 150, 1, 0)
+	btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+	btn.BorderSizePixel = 0
+	btn.Text = tab.Name
+	btn.Font = Enum.Font.SourceSansBold
+	btn.TextSize = 18
+	btn.TextColor3 = Color3.new(1,1,1)
+	btn.Parent = menuScroll
+
+	btn.MouseButton1Click:Connect(function()
+		onTabClicked(i)
+	end)
+
+	buttons[i] = btn
+end
+
+menuScroll.CanvasSize = UDim2.new(0, #tabs * 150 + 10, 0, 0)
+
+-- สีเรนโบว์ ไล่สี (Hue) สำหรับปุ่มและกรอบ
+local function HSVToRGB(h, s, v)
+	local c = v * s
+	local x = c * (1 - math.abs((h * 6) % 2 - 1))
+	local m = v - c
+	local r, g, b = 0, 0, 0
+	if h < 1/6 then r, g, b = c, x, 0
+	elseif h < 2/6 then r, g, b = x, c, 0
+	elseif h < 3/6 then r, g, b = 0, c, x
+	elseif h < 4/6 then r, g, b = 0, x, c
+	elseif h < 5/6 then r, g, b = x, 0, c
+	else r, g, b = c, 0, x end
+	return Color3.new(r + m, g + m, b + m)
+end
+
+local hue = 0
+RunService.RenderStepped:Connect(function(dt)
+	hue = (hue + dt * 0.3) % 1
+	local color = HSVToRGB(hue, 1, 1)
+	toggleBtn.TextColor3 = color
+	stroke.Color = color
+end)
+
+-- เรียกเปิดแท็บแรก (Main) ตอนเริ่มต้น
+onTabClicked(1)
+
+-- อัปเดต FPS ทุก 1 วินาที
+RunService.RenderStepped:Connect(function()
+	frames += 1
+	local now = tick()
+	if now - lastTime >= 1 then
+		if fpsLabel and fpsLabel.Parent then
+			fpsLabel.Text = "FPS: " .. math.floor(frames / (now - lastTime))
+		end
+		frames = 0
+		lastTime = now
+	end
+end)
